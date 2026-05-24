@@ -1,0 +1,374 @@
+local TS         = game:GetService("TweenService")
+local Lighting   = game:GetService("Lighting")
+local CoreGui    = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+
+pcall(function() CoreGui:FindFirstChild("WackShopLoader"):Destroy() end)
+
+local function ti(t, s, d)
+    return TweenInfo.new(t, s or Enum.EasingStyle.Quint, d or Enum.EasingDirection.Out)
+end
+local function tw(obj, info, goal) return TS:Create(obj, info, goal) end
+local function new(cls, props, parent)
+    local i = Instance.new(cls)
+    for k,v in pairs(props) do i[k] = v end
+    if parent then i.Parent = parent end
+    return i
+end
+
+-- Blur
+local blur = new("BlurEffect", {Size=0}, Lighting)
+tw(blur, ti(0.8), {Size=20}):Play()
+
+-- ScreenGui
+local gui = new("ScreenGui", {
+    Name           = "WackShopLoader",
+    IgnoreGuiInset = true,
+    ResetOnSpawn   = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
+}, CoreGui)
+
+-- พื้นหลัง
+local bg = new("Frame", {
+    Size                   = UDim2.new(1,0,1,0),
+    BackgroundColor3       = Color3.fromRGB(12,12,18),
+    BorderSizePixel        = 0,
+    BackgroundTransparency = 1,
+}, gui)
+tw(bg, ti(0.5), {BackgroundTransparency=0}):Play()
+
+-- gradient
+new("UIGradient", {
+    Rotation = 135,
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,10,28)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12,12,18)),
+        ColorSequenceKeypoint.new(1,   Color3.fromRGB(8,4,20)),
+    },
+}, bg)
+
+-- Particles
+for i = 1, 30 do
+    local sz  = math.random(2,4)
+    local col = (i%2==0) and Color3.fromRGB(130,80,255) or Color3.fromRGB(0,195,255)
+    local p = new("Frame", {
+        AnchorPoint            = Vector2.new(0.5,0.5),
+        Size                   = UDim2.new(0,sz,0,sz),
+        Position               = UDim2.new(math.random(),0,math.random(),0),
+        BackgroundColor3       = col,
+        BackgroundTransparency = math.random(40,75)/100,
+        BorderSizePixel        = 0,
+        ZIndex                 = 3,
+    }, bg)
+    new("UICorner", {CornerRadius=UDim.new(1,0)}, p)
+    task.spawn(function()
+        while p.Parent do
+            tw(p, TweenInfo.new(math.random(7,14), Enum.EasingStyle.Sine),
+                {Position=UDim2.new(math.random(),0,math.random(),0)}):Play()
+            task.wait(math.random(6,12))
+        end
+    end)
+end
+
+-- Grid dots
+local gridC = new("Frame", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, ZIndex=2}, bg)
+for row = 0, 12 do
+    for col = 0, 18 do
+        local ox = (row%2==0) and 0 or (1/18*0.5)
+        local dot = new("Frame", {
+            AnchorPoint            = Vector2.new(0.5,0.5),
+            Size                   = UDim2.new(0,2,0,2),
+            Position               = UDim2.new(col/18+ox,0,row/12,0),
+            BackgroundColor3       = Color3.fromRGB(0,195,255),
+            BackgroundTransparency = math.random(65,92)/100,
+            BorderSizePixel        = 0,
+            ZIndex                 = 2,
+        }, gridC)
+        new("UICorner", {CornerRadius=UDim.new(1,0)}, dot)
+        task.spawn(function()
+            task.wait(math.random(0,200)/100)
+            while dot.Parent do
+                tw(dot, TweenInfo.new(math.random(15,35)/10, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                    {BackgroundTransparency=math.random(30,90)/100}):Play()
+                task.wait(math.random(15,35)/10)
+            end
+        end)
+    end
+end
+
+-- Corner accents
+local corners = {
+    {ap=Vector2.new(0,0), pos=UDim2.new(0,20,0,20)},
+    {ap=Vector2.new(1,0), pos=UDim2.new(1,-20,0,20)},
+    {ap=Vector2.new(0,1), pos=UDim2.new(0,20,1,-20)},
+    {ap=Vector2.new(1,1), pos=UDim2.new(1,-20,1,-20)},
+}
+for _, c in ipairs(corners) do
+    new("Frame", {AnchorPoint=c.ap, Position=c.pos, Size=UDim2.new(0,40,0,2),
+        BackgroundColor3=Color3.fromRGB(0,195,255), BackgroundTransparency=0.3,
+        BorderSizePixel=0, ZIndex=8}, bg)
+    new("Frame", {AnchorPoint=c.ap, Position=c.pos, Size=UDim2.new(0,2,0,40),
+        BackgroundColor3=Color3.fromRGB(0,195,255), BackgroundTransparency=0.3,
+        BorderSizePixel=0, ZIndex=8}, bg)
+end
+
+-- Accent line บน
+local topLine = new("Frame", {
+    Size=UDim2.new(1,0,0,2), Position=UDim2.new(0,0,0,0),
+    BackgroundColor3=Color3.fromRGB(0,195,255), BorderSizePixel=0, ZIndex=9,
+}, bg)
+new("UIGradient", {
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,195,255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(130,80,255)),
+        ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,195,255)),
+    },
+}, topLine)
+
+-- วงแหวน spin
+local RING_Y = 0.30
+local function makeRing(sw, thick, trans)
+    local f = new("Frame", {
+        AnchorPoint=Vector2.new(0.5,0.5),
+        Position=UDim2.new(0.5,0,RING_Y,0),
+        Size=UDim2.new(sw,0,sw,0),
+        BackgroundTransparency=1, ZIndex=6,
+    }, bg)
+    new("UIAspectRatioConstraint", {
+        AspectRatio=1, AspectType=Enum.AspectType.FitWithinMaxSize,
+        DominantAxis=Enum.DominantAxis.Width,
+    }, f)
+    new("UICorner", {CornerRadius=UDim.new(1,0)}, f)
+    local s = new("UIStroke", {Thickness=thick, Color=Color3.fromRGB(0,195,255), Transparency=trans}, f)
+    return f, s
+end
+
+local outerRing, outerStroke = makeRing(0.48, 2,  0.4)
+local midRing,   midStroke   = makeRing(0.40, 1,  0.75)
+local innerRing, innerStroke = makeRing(0.32, 36, 0.90)
+
+new("UIGradient", {
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,    Color3.fromRGB(0,195,255)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(130,80,255)),
+        ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0,195,255)),
+        ColorSequenceKeypoint.new(1,    Color3.fromRGB(130,80,255)),
+    },
+}, outerStroke)
+
+RunService.RenderStepped:Connect(function(dt)
+    if not bg.Parent then return end
+    outerRing.Rotation -= dt * 22
+    innerRing.Rotation += dt * 38
+    midRing.Rotation   += dt * 8
+end)
+
+task.spawn(function()
+    local h = 0
+    while bg.Parent do
+        h = (h+0.004)%1
+        innerStroke.Color = Color3.fromHSV(h, 0.85, 1)
+        midStroke.Color   = Color3.fromHSV((h+0.5)%1, 0.85, 1)
+        task.wait()
+    end
+end)
+
+-- Logo "WACKSHOP"
+local logoShadow = new("TextLabel", {
+    AnchorPoint=Vector2.new(0.5,0.5),
+    Position=UDim2.new(0.5,3,RING_Y,4),
+    Size=UDim2.new(0.80,0,0.10,0),
+    BackgroundTransparency=1,
+    Text="WACKSHOP", Font=Enum.Font.GothamBlack, TextScaled=true,
+    TextColor3=Color3.fromRGB(0,40,100), TextTransparency=1, ZIndex=9,
+}, bg)
+new("UITextSizeConstraint", {MaxTextSize=80, MinTextSize=20}, logoShadow)
+
+local logo = new("TextLabel", {
+    AnchorPoint=Vector2.new(0.5,0.5),
+    Position=UDim2.new(0.5,0,RING_Y,0),
+    Size=UDim2.new(0.80,0,0.10,0),
+    BackgroundTransparency=1,
+    Text="WACKSHOP", Font=Enum.Font.GothamBlack, TextScaled=true,
+    TextColor3=Color3.new(1,1,1), TextTransparency=1, ZIndex=10,
+}, bg)
+new("UITextSizeConstraint", {MaxTextSize=80, MinTextSize=20}, logo)
+new("UIStroke", {Thickness=12, Color=Color3.fromRGB(0,195,255), Transparency=0.82}, logo)
+local sharpStroke = new("UIStroke", {Thickness=2, Color=Color3.fromRGB(0,235,255), Transparency=0}, logo)
+
+tw(logo,       ti(1.1, Enum.EasingStyle.Back), {TextTransparency=0}):Play()
+tw(logoShadow, ti(1.1, Enum.EasingStyle.Back), {TextTransparency=0.75}):Play()
+
+-- glitch effect
+task.spawn(function()
+    task.wait(1.0)
+    for _ = 1,3 do
+        logo.Position = UDim2.new(0.5,math.random(-4,4),RING_Y,math.random(-2,2))
+        logo.TextColor3 = Color3.fromRGB(math.random(150,255),0,math.random(150,255))
+        task.wait(0.04)
+        logo.Position = UDim2.new(0.5,0,RING_Y,0)
+        logo.TextColor3 = Color3.new(1,1,1)
+        task.wait(math.random(3,10)/100)
+    end
+    task.spawn(function()
+        while logo.Parent do
+            task.wait(math.random(35,80)/10)
+            for _ = 1,math.random(1,3) do
+                logo.Position = UDim2.new(0.5,math.random(-3,3),RING_Y,math.random(-2,2))
+                sharpStroke.Color = Color3.fromRGB(130,80,255)
+                task.wait(0.03)
+                logo.Position = UDim2.new(0.5,0,RING_Y,0)
+                sharpStroke.Color = Color3.fromRGB(0,235,255)
+                task.wait(0.05)
+            end
+        end
+    end)
+end)
+
+-- Subtitle
+local sub = new("TextLabel", {
+    AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.56,0),
+    Size=UDim2.new(0.75,0,0.04,0), BackgroundTransparency=1,
+    Text="P R E M I U M  •  E D I T I O N",
+    Font=Enum.Font.GothamSemibold, TextScaled=true,
+    TextColor3=Color3.fromRGB(130,80,255), TextTransparency=1, ZIndex=10,
+}, bg)
+new("UITextSizeConstraint", {MaxTextSize=13, MinTextSize=7}, sub)
+tw(sub, ti(1.5, Enum.EasingStyle.Sine), {TextTransparency=0.2}):Play()
+
+-- Status
+local statusList = {
+    "Initializing...",
+    "Loading modules...",
+    "Connecting...",
+    "Injecting scripts...",
+    "Calibrating UI...",
+    "Almost ready...",
+    "READY ✓",
+}
+local statusLbl = new("TextLabel", {
+    AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.68,0),
+    Size=UDim2.new(0.75,0,0.04,0), BackgroundTransparency=1,
+    Text=statusList[1], Font=Enum.Font.Gotham, TextScaled=true,
+    TextColor3=Color3.fromRGB(120,120,145), TextTransparency=0, ZIndex=10,
+}, bg)
+new("UITextSizeConstraint", {MaxTextSize=13, MinTextSize=7}, statusLbl)
+
+-- Progress bar
+local barBG = new("Frame", {
+    AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.76,0),
+    Size=UDim2.new(0.75,0,0,8),
+    BackgroundColor3=Color3.fromRGB(20,20,30),
+    BorderSizePixel=0, ZIndex=10,
+}, bg)
+new("UICorner", {CornerRadius=UDim.new(1,0)}, barBG)
+local barStroke = new("UIStroke", {Color=Color3.fromRGB(45,45,68), Transparency=0, Thickness=1}, barBG)
+new("UIGradient", {
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,195,255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(130,80,255)),
+        ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,195,255)),
+    },
+}, barStroke)
+
+local barFill = new("Frame", {
+    Size=UDim2.new(0,0,1,0),
+    BackgroundColor3=Color3.fromRGB(0,195,255),
+    BorderSizePixel=0, ZIndex=11,
+}, barBG)
+new("UICorner", {CornerRadius=UDim.new(1,0)}, barFill)
+new("UIGradient", {
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,195,255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(130,80,255)),
+        ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,195,255)),
+    },
+}, barFill)
+
+local barGlow = new("Frame", {
+    AnchorPoint=Vector2.new(0,0.5), Position=UDim2.new(0,0,0.5,0),
+    Size=UDim2.new(0,0,0,20),
+    BackgroundColor3=Color3.fromRGB(0,195,255),
+    BackgroundTransparency=0.75, BorderSizePixel=0, ZIndex=10,
+}, barBG)
+new("UICorner", {CornerRadius=UDim.new(1,0)}, barGlow)
+
+local pct = new("TextLabel", {
+    AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.83,0),
+    Size=UDim2.new(0.3,0,0.04,0), BackgroundTransparency=1,
+    Font=Enum.Font.GothamBold, TextScaled=true,
+    TextColor3=Color3.fromRGB(0,195,255), Text="0%", ZIndex=10,
+}, bg)
+new("UITextSizeConstraint", {MaxTextSize=16, MinTextSize=10}, pct)
+
+-- Progress loop
+local loadDone = false
+local TOTAL = 3.0 -- ปรับเวลาโหลดให้เร็วขึ้นเป็น 3 วินาที
+local STEPS = 100
+local DT    = TOTAL / STEPS
+local sidx  = 1
+local sstep = math.ceil(STEPS / #statusList)
+
+task.spawn(function()
+    for i = 0, STEPS do
+        local r = i / STEPS
+        pct.Text       = i .. "%"
+        barFill.Size   = UDim2.new(r, 0, 1, 0)
+        barGlow.Size   = UDim2.new(r, 0, 0, 20)
+
+        local ni = math.clamp(math.floor(i/sstep)+1, 1, #statusList)
+        if ni ~= sidx then
+            sidx = ni
+            tw(statusLbl, ti(0.15,Enum.EasingStyle.Sine), {TextTransparency=1}):Play()
+            task.wait(0.15)
+            statusLbl.Text = statusList[sidx]
+            tw(statusLbl, ti(0.2,Enum.EasingStyle.Sine), {TextTransparency=0}):Play()
+        end
+        task.wait(DT)
+    end
+    task.wait(0.2)
+    loadDone = true
+    
+    --// ระบบรันสคริปต์แบบปลอดภัย (Safe Run) ขึ้นทันทีเมื่อครบ 100%
+    task.spawn(function()
+        local success, err = pcall(function()
+            local scriptData = game:HttpGet("https://raw.githubusercontent.com/redfabza/Script-/refs/heads/main/WackShop_v3.lua")
+            loadstring(scriptData)()
+        end)
+        
+        -- ถ้าเกิด Error สคริปต์จะไม่เงียบหาย แต่จะพิมพ์บอกในกด F9 (Console)
+        if not success then
+            warn("WackShop Loader Error: " .. tostring(err))
+            statusLbl.Text = "Error Loading Script!"
+            statusLbl.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    end)
+end)
+
+repeat task.wait(0.1) until loadDone
+
+-- Outro
+local flash = new("Frame", {
+    Size=UDim2.new(1,0,1,0),
+    BackgroundColor3=Color3.fromRGB(0,195,255),
+    BackgroundTransparency=1, BorderSizePixel=0, ZIndex=100,
+}, gui)
+tw(flash, ti(0.08, Enum.EasingStyle.Linear), {BackgroundTransparency=0.6}):Play()
+task.wait(0.08)
+tw(flash, ti(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency=1}):Play()
+
+local ft = ti(0.6, Enum.EasingStyle.Quint)
+tw(bg,         ft, {BackgroundTransparency=1}):Play()
+tw(logo,       ft, {TextTransparency=1}):Play()
+tw(logoShadow, ft, {TextTransparency=1}):Play()
+tw(sub,        ft, {TextTransparency=1}):Play()
+tw(pct,        ft, {TextTransparency=1}):Play()
+tw(statusLbl,  ft, {TextTransparency=1}):Play()
+tw(barBG,      ft, {BackgroundTransparency=1}):Play()
+tw(barFill,    ft, {BackgroundTransparency=1}):Play()
+tw(barGlow,    ft, {BackgroundTransparency=1}):Play()
+tw(blur, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Size=0}):Play()
+
+task.wait(0.6)
+pcall(function() blur:Destroy() end)
+pcall(function() gui:Destroy()  end)
